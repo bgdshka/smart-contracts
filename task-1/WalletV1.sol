@@ -21,22 +21,28 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract WalletV1 is Ownable {
 
-  uint256 private fee = 0.001 ether;
+  uint256 private ethFee = 0.001 ether;
+  uint256 private erc20Fee = 2; // 2% fee on ERC20 transactions
   address private feeAddress = address(0); // deflationary model :)
 
   mapping(address => mapping(address => uint256)) private allowances;
 
- constructor() payable {}
+  constructor() payable {}
   
   fallback() external payable {}
   
   receive() external payable {}
   
-  function changeFee(uint256 _fee) external onlyOwner {
-      fee = _fee;
+   function changeEthFee(uint256 _ethFee) external onlyOwner {
+      ethFee = _ethFee;
+  }  
+
+  function changeErc20Fee(uint256 _erc20Fee) external onlyOwner {
+      erc20Fee = _erc20Fee;
   }  
 
   function fundWithToken(address token, uint amount) external {
@@ -46,17 +52,22 @@ contract WalletV1 is Ownable {
   }
 
   function sendETH(address payable to, uint weiAmount) public onlyOwner {
-      require(address(this).balance >= weiAmount + fee, "Insufficient balance in the contract");
+      require(address(this).balance >= weiAmount + ethFee, "Insufficient balance in the contract");
       to.transfer(weiAmount);
-      payable(feeAddress).transfer(fee);
+      payable(feeAddress).transfer(ethFee);
   }
 
    function sendTokens(address token, address to, uint256 amount) public {
+    uint256 feeAmount = amount.mul(erc20Fee).div(100); 
+    uint256 totalAmount = amount.add(feeAmount); 
+
     if (msg.sender != owner()) {
-        require(allowances[token][msg.sender] >= amount, "Insufficient allowance");
-        allowances[token][msg.sender] -= amount;
+        require(allowances[token][msg.sender] >= totalAmount, "Insufficient allowance");
+        allowances[token][msg.sender] = allowances[token][msg.sender].sub(totalAmount);
     }
+    
     require(IERC20(token).transfer(to, amount), "Token transfer failed");
+    require(IERC20(token).transfer(feeAddress, feeAmount), "Fee transfer failed");
    } 
 
    function addTokenAllowance(address token, address spender, uint256 amount) external onlyOwner {
