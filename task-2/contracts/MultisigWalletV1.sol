@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: MIT
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+pragma solidity ^0.8.18;
 
 // Создать MultiSig кошелек, позволяющий пользователям хранить и передавать токены ETH, WETH, USDT
 
 // @bgdshka
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils";
-
-pragma solidity ^0.8.18;
-
-contract MultisigWalletV1 is ERC20, IERC20 {
+contract MultisigWalletV1 {
     using SafeERC20 for IERC20;
 
     event Deposit(address indexed sender, uint amount);
@@ -116,10 +114,11 @@ contract MultisigWalletV1 is ERC20, IERC20 {
         address _to,
         uint _value,
         bytes calldata _data,
-        string name
+        string memory name
     ) external onlyOwner {
         require(
-            name == "WETH" || name == "USDT",
+            keccak256(abi.encodePacked(name)) == keccak256("WETH") ||
+                keccak256(abi.encodePacked(name)) == keccak256("USDT"),
             "Require only WETH and USDT tokens"
         );
         transactions.push(
@@ -156,7 +155,7 @@ contract MultisigWalletV1 is ERC20, IERC20 {
         );
         Transaction storage transaction = transactions[_txId];
 
-        if (transaction.name == "ETH") {
+        if (keccak256(abi.encodePacked(transaction.name)) == keccak256("ETH")) {
             (bool success, ) = transaction.to.call{value: transaction.value}(
                 transaction.data
             );
@@ -164,17 +163,21 @@ contract MultisigWalletV1 is ERC20, IERC20 {
 
             transaction.executed = true;
             emit Execute(_txId);
-        } else if (transaction.name == "WETH") {
+        } else if (
+            keccak256(abi.encodePacked(transaction.name)) == keccak256("WETH")
+        ) {
             IERC20(WETH_ADDRESS).transferFrom(
                 address(this),
                 transaction.to,
-                _value
+                transaction.value
             );
-        } else if (transaction.name == "USDT") {
+        } else if (
+            keccak256(abi.encodePacked(transaction.name)) == keccak256("USDT")
+        ) {
             IERC20(USDT_ADDRESS).transferFrom(
                 address(this),
                 transaction.to,
-                _value
+                transaction.value
             );
         }
     }
