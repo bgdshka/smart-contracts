@@ -1,18 +1,35 @@
 // SPDX-License-Identifier: MIT
+
+// Создать MultiSig кошелек, позволяющий пользователям хранить и передавать токены ETH, WETH, USDT
+
+// @bgdshka
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils";
+
 pragma solidity ^0.8.18;
 
-contract MultisigWalletV1 {
+contract MultisigWalletV1 is ERC20, IERC20 {
+    using SafeERC20 for IERC20;
+
     event Deposit(address indexed sender, uint amount);
     event Submit(uint indexed txId);
     event Approve(address indexed owner, uint indexed txId);
     event Revoke(address indexed owner, uint indexed txId);
     event Execute(uint indexed txId);
 
+    address public constant WETH_ADDRESS =
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant USDT_ADDRESS =
+        0xdAC17F958D2ee523a2206206994597C13D831ec7;
+
     struct Transaction {
         address to;
         uint value;
         bytes data;
         bool executed;
+        string name; // ETH, WETH, USDT
     }
 
     address[] public owners;
@@ -24,36 +41,36 @@ contract MultisigWalletV1 {
     Transaction[] public transactions;
 
     modifier onlyOwner() {
-        require(isOwner[msg.sender], "not owner");
+        require(isOwner[msg.sender], "Not owner");
         _;
     }
 
     modifier txExist(uint _txId) {
-        require(_txId < transactions.length, "tx does not exist");
+        require(_txId < transactions.length, "Tx does not exist");
         _;
     }
 
     modifier notApproved(uint _txId) {
-        require(!approved[_txId][msg.sender], "tx already approved");
+        require(!approved[_txId][msg.sender], "Tx already approved");
         _;
     }
 
     modifier notExecuted(uint _txId) {
-        require(!transactions[_txId].executed, "tx already executed");
+        require(!transactions[_txId].executed, "Tx already executed");
         _;
     }
 
     constructor(address[] memory _owners, uint _confirmations) {
-        require(_owners.length > 0, "owners required");
+        require(_owners.length > 0, "Owners required");
         require(
             _confirmations > 0 && _confirmations <= _owners.length,
-            "invalid number of required confirmations"
+            "Invalid number of required confirmations"
         );
 
         for (uint i; i < _owners.length; i++) {
             address owner = _owners[i];
-            require(owner != address(0), "invalid owner");
-            require(!isOwner[owner], "owner is not unique");
+            require(owner != address(0), "Invalid owner");
+            require(!isOwner[owner], "Owner is not unique");
 
             isOwner[owner] = true;
             owners.push(owner);
@@ -66,13 +83,53 @@ contract MultisigWalletV1 {
         emit Deposit(msg.sender, msg.value);
     }
 
-    function submit(
+    function depositToken(address token, uint amount) external {
+        require(amount > 0, "Cannot fund with 0 tokens");
+        require(
+            token == WETH_ADDRESS || token == USDT_ADDRESS,
+            "Should be WETH or USDT"
+        );
+        // approve to spend tokens from contract
+        IERC20(token).approve(address(this), amount);
+        IERC20(token).transfer(msg.sender, amount);
+        emit Deposit(msg.sender, amount);
+    }
+
+    function submitETH(
         address _to,
         uint _value,
         bytes calldata _data
     ) external onlyOwner {
         transactions.push(
-            Transaction({to: _to, value: _value, data: _data, executed: false})
+            Transaction({
+                to: _to,
+                value: _value,
+                data: _data,
+                executed: false,
+                name: "ETH"
+            })
+        );
+        emit Submit(transactions.length - 1);
+    }
+
+    function submitToken(
+        address _to,
+        uint _value,
+        bytes calldata _data,
+        string name
+    ) external onlyOwner {
+        require(
+            name == "WETH" || name == "USDT",
+            "Require only WETH and USDT tokens"
+        );
+        transactions.push(
+            Transaction({
+                to: _to,
+                value: _value,
+                data: _data,
+                executed: false,
+                name: name
+            })
         );
         emit Submit(transactions.length - 1);
     }
@@ -95,23 +152,37 @@ contract MultisigWalletV1 {
     function execute(uint _txId) external txExist(_txId) notExecuted(_txId) {
         require(
             _getApprovalCount(_txId) >= confirmations,
-            "approvals less than required"
+            "Approvals less than required"
         );
         Transaction storage transaction = transactions[_txId];
 
-        transaction.executed = true;
+        if (transaction.name == "ETH") {
+            (bool success, ) = transaction.to.call{value: transaction.value}(
+                transaction.data
+            );
+            require(success, "Tx failed");
 
-        (bool success, ) = transaction.to.call{value: transaction.value}(
-            transaction.data
-        );
-        require(success, "tx failed");
-        emit Execute(_txId);
+            transaction.executed = true;
+            emit Execute(_txId);
+        } else if (transaction.name == "WETH") {
+            IERC20(WETH_ADDRESS).transferFrom(
+                address(this),
+                transaction.to,
+                _value
+            );
+        } else if (transaction.name == "USDT") {
+            IERC20(USDT_ADDRESS).transferFrom(
+                address(this),
+                transaction.to,
+                _value
+            );
+        }
     }
 
     function revoke(
         uint _txId
     ) external onlyOwner txExist(_txId) notExecuted(_txId) {
-        require(!approved[_txId][msg.sender], "approval required");
+        require(!approved[_txId][msg.sender], "Tx approval required");
         approved[_txId][msg.sender] = false;
         emit Revoke(msg.sender, _txId);
     }
