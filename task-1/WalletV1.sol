@@ -16,14 +16,12 @@
 // - Перевод этой комиссии должен производиться вместе с обычным переводом
 // - Адрес для перевода зашит в контракт хардкодом
 
-// @bgdshka
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract WalletV1 is Ownable, ERC20, IERC20 {
+contract WalletV1 is Ownable, IERC20 {
     uint256 private ethFee = 0.001 ether;
     uint256 private erc20Fee = 2; // 2% fee on ERC20 transactions
     address private feeAddress = address(0); // deflationary model :)
@@ -47,7 +45,7 @@ contract WalletV1 is Ownable, ERC20, IERC20 {
     function fundWithToken(address token, uint amount) external {
         require(amount > 0, "Cannot fund with 0 tokens");
         require(
-            IERC20(token).transfer(msg.sender, address(this), amount),
+            IERC20(token).transferFrom(msg.sender, address(this), amount),
             "Token transfer failed"
         );
     }
@@ -62,8 +60,8 @@ contract WalletV1 is Ownable, ERC20, IERC20 {
     }
 
     function sendTokens(address token, address to, uint256 amount) public {
-        uint256 feeAmount = amount.mul(erc20Fee).div(100);
-        uint256 totalAmount = amount.add(feeAmount);
+        uint256 feeAmount = (amount * erc20Fee) / 100;
+        uint256 totalAmount = amount + feeAmount;
 
         if (msg.sender != owner()) {
             require(
