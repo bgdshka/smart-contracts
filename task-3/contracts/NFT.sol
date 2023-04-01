@@ -96,10 +96,12 @@ contract NFT is ERC721, Ownable {
         paused = true;
     }
 
-    function withdraw() public payable onlyOwner {
+    function withdraw() public onlyOwner {
         uint256 ethBalance = address(this).balance;
         if (ethBalance > 0) {
-            (bool sent, ) = payable(owner()).call{value: msg.value}("");
+            (bool sent, ) = payable(owner()).call{value: address(this).balance}(
+                ""
+            );
             require(sent, "Failed to send Ether");
         }
 
