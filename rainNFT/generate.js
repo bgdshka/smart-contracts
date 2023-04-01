@@ -149,6 +149,6 @@ async function generateRainSounds(numSounds, duration, intensity) {
   }
 }
 
-generateRainSounds(5, 5, 0.1)
+generateRainSounds(100, 5, 0.1)
   .then(() => console.log('Done'))
   .catch((err) => console.error(err));
