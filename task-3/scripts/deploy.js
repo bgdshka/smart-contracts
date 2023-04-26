@@ -42,10 +42,10 @@ function main() {
         var NFT, nft;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, hardhat_1.ethers.getContractFactory('NFT')];
+                case 0: return [4 /*yield*/, hardhat_1.ethers.getContractFactory('NFT2')];
                 case 1:
                     NFT = _a.sent();
-                    return [4 /*yield*/, NFT.deploy('ipfs://bafybeidb6qgvzk5x7b3m3xe23modl5sri6omge2wiogywvmqdf44j2augy/')];
+                    return [4 /*yield*/, NFT.deploy('ipfs://bafybeifhvuc4ih66jjpddshcjycc64s2hdoezbfqhmxasfusmdcka6slse/')];
                 case 2:
                     nft = _a.sent();
                     return [4 /*yield*/, nft.deployed()];

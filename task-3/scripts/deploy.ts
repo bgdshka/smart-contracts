@@ -1,9 +1,9 @@
 import { ethers } from 'hardhat';
 
 async function main() {
-  const NFT = await ethers.getContractFactory('NFT');
+  const NFT = await ethers.getContractFactory('NFT2');
   const nft = await NFT.deploy(
-    'ipfs://bafybeidb6qgvzk5x7b3m3xe23modl5sri6omge2wiogywvmqdf44j2augy/'
+    'ipfs://bafybeifhvuc4ih66jjpddshcjycc64s2hdoezbfqhmxasfusmdcka6slse/'
   );
 
   await nft.deployed();

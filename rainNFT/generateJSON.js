@@ -18,9 +18,10 @@ fs.readdir(directoryPath, function (err, files) {
     // Create the JSON object
     const data = {
       description: `${fileName} - unique rain sound`,
-      external_url: `https://ipfs.io/ipfs/bafybeic64tgix2qix5nwbc2ioamgjmungxmlxcveza5mg5u7a4jetjhfyq/${fileName}.wav`,
-      image: `https://ipfs.io/ipfs/bafybeic64tgix2qix5nwbc2ioamgjmungxmlxcveza5mg5u7a4jetjhfyq/${fileName}.wav`,
-      animation_url: `https://ipfs.io/ipfs/bafybeic64tgix2qix5nwbc2ioamgjmungxmlxcveza5mg5u7a4jetjhfyq/${fileName}.wav`,
+      external_url: `ipfs://bafybeic64tgix2qix5nwbc2ioamgjmungxmlxcveza5mg5u7a4jetjhfyq/${fileName}.wav`,
+      image: `ipfs://bafybeic64tgix2qix5nwbc2ioamgjmungxmlxcveza5mg5u7a4jetjhfyq/${fileName}.wav`,
+      animation_url: `ipfs://bafybeic64tgix2qix5nwbc2ioamgjmungxmlxcveza5mg5u7a4jetjhfyq/${fileName}.wav`,
+      audio_url: `ipfs://bafybeic64tgix2qix5nwbc2ioamgjmungxmlxcveza5mg5u7a4jetjhfyq/${fileName}.wav`,
       name: fileName,
       attributes: [],
     };
